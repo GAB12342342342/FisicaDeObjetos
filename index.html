@@ -3,92 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador de Trajetória de Objetos</title>
+  <title>Calculadora de Física de Objetos</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="bg-layer" id="bgLayer"></div>
+
   <div class="app">
     <header class="header">
-      <h1>🎯 Simulador de Trajetória</h1>
-      <p>Escolha um objeto, ajuste os parâmetros e veja como ele se move no ar.</p>
+      <h1>🧮 Calculadora de Física de Objetos</h1>
+      <p>Escolha um tipo de cálculo, preencha os valores e veja o resultado passo a passo.</p>
     </header>
 
     <main class="main">
       <section class="panel">
         <div class="field">
-          <label for="objectSelect">Objeto</label>
-          <select id="objectSelect">
-            <option value="futebol">⚽ Bola de futebol</option>
-            <option value="basquete">🏀 Bola de basquete</option>
-            <option value="tenis">🎾 Bola de tênis</option>
-            <option value="canhao">💣 Bala de canhão</option>
-            <option value="pena">🪶 Pena</option>
-            <option value="pedra">🪨 Pedra</option>
-          </select>
+          <label for="calcType">Tipo de cálculo</label>
+          <select id="calcType"></select>
         </div>
 
-        <div class="field">
-          <label for="velocity">Velocidade inicial: <span id="velocityValue">25</span> m/s</label>
-          <input type="range" id="velocity" min="1" max="80" value="25">
-        </div>
+        <p class="calc-description" id="calcDescription"></p>
 
-        <div class="field">
-          <label for="angle">Ângulo de lançamento: <span id="angleValue">45</span>°</label>
-          <input type="range" id="angle" min="1" max="89" value="45">
-        </div>
-
-        <div class="field">
-          <label for="planet">Gravidade (planeta)</label>
-          <select id="planet">
-            <option value="9.81">🌍 Terra (9.81 m/s²)</option>
-            <option value="1.62">🌕 Lua (1.62 m/s²)</option>
-            <option value="3.71">🔴 Marte (3.71 m/s²)</option>
-            <option value="24.79">🟠 Júpiter (24.79 m/s²)</option>
-          </select>
-        </div>
-
-        <div class="field checkbox-field">
-          <label>
-            <input type="checkbox" id="airResistance">
-            Considerar resistência do ar
-          </label>
-        </div>
-
-        <div class="field checkbox-field">
-          <label>
-            <input type="checkbox" id="keepTrails">
-            Manter trajetórias anteriores
-          </label>
-        </div>
+        <form id="inputsForm" class="inputs-form"></form>
 
         <div class="buttons">
-          <button id="launchBtn" class="btn primary">🚀 Lançar</button>
-          <button id="resetBtn" class="btn">🔄 Limpar</button>
-        </div>
-
-        <div class="stats" id="stats">
-          <div class="stat">
-            <span class="stat-label">Altura máxima</span>
-            <span class="stat-value" id="maxHeight">–</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Alcance</span>
-            <span class="stat-value" id="range">–</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Tempo de voo</span>
-            <span class="stat-value" id="flightTime">–</span>
-          </div>
+          <button id="calcBtn" class="btn primary" type="submit" form="inputsForm">🧮 Calcular</button>
+          <button id="clearBtn" class="btn" type="button">🔄 Limpar</button>
         </div>
       </section>
 
-      <section class="canvas-wrapper">
-        <canvas id="simCanvas"></canvas>
+      <section class="results-panel">
+        <h2>Resultado</h2>
+        <div id="resultsContent" class="results-content">
+          <p class="placeholder">Preencha os valores ao lado e clique em <strong>Calcular</strong> para ver a fórmula, a substituição dos valores e o resultado.</p>
+        </div>
       </section>
     </main>
 
     <footer class="footer">
-      <p>Simulação simplificada de movimento de projéteis. Feito com HTML, CSS e JavaScript.</p>
+      <p>Calculadora de fórmulas clássicas da mecânica. Feito com HTML, CSS e JavaScript.</p>
     </footer>
   </div>
 
