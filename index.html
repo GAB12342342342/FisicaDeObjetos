@@ -1,72 +1,97 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Trajetória de Objetos</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Trajetória de Objetos</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🚀 Simulador de Trajetória</h1>
-            <p>Explore a física do lançamento de projéteis com objetos diferentes</p>
-        </header>
+  <div class="app">
+    <header class="header">
+      <h1>🎯 Simulador de Trajetória</h1>
+      <p>Escolha um objeto, ajuste os parâmetros e veja como ele se move no ar.</p>
+    </header>
 
-        <main class="app">
-            <!-- Painel de controles -->
-            <aside class="painel">
-                <h2>⚙️ Controles</h2>
+    <main class="main">
+      <section class="panel">
+        <div class="field">
+          <label for="objectSelect">Objeto</label>
+          <select id="objectSelect">
+            <option value="futebol">⚽ Bola de futebol</option>
+            <option value="basquete">🏀 Bola de basquete</option>
+            <option value="tenis">🎾 Bola de tênis</option>
+            <option value="canhao">💣 Bala de canhão</option>
+            <option value="pena">🪶 Pena</option>
+            <option value="pedra">🪨 Pedra</option>
+          </select>
+        </div>
 
-                <div class="controle">
-                    <label for="objeto">Objeto:</label>
-                    <select id="objeto">
-                        <option value="futebol">⚽ Bola de Futebol</option>
-                        <option value="canhao">💣 Bola de Canhão</option>
-                        <option value="pena">🪶 Pena</option>
-                        <option value="foguete">🚀 Foguete</option>
-                        <option value="passaro">🐦 Pássaro</option>
-                    </select>
-                </div>
+        <div class="field">
+          <label for="velocity">Velocidade inicial: <span id="velocityValue">25</span> m/s</label>
+          <input type="range" id="velocity" min="1" max="80" value="25">
+        </div>
 
-                <div class="controle">
-                    <label for="angulo">Ângulo: <span id="anguloValor">45</span>°</label>
-                    <input type="range" id="angulo" min="0" max="90" value="45">
-                </div>
+        <div class="field">
+          <label for="angle">Ângulo de lançamento: <span id="angleValue">45</span>°</label>
+          <input type="range" id="angle" min="1" max="89" value="45">
+        </div>
 
-                <div class="controle">
-                    <label for="velocidade">Velocidade: <span id="velocidadeValor">50</span> m/s</label>
-                    <input type="range" id="velocidade" min="10" max="150" value="50">
-                </div>
+        <div class="field">
+          <label for="planet">Gravidade (planeta)</label>
+          <select id="planet">
+            <option value="9.81">🌍 Terra (9.81 m/s²)</option>
+            <option value="1.62">🌕 Lua (1.62 m/s²)</option>
+            <option value="3.71">🔴 Marte (3.71 m/s²)</option>
+            <option value="24.79">🟠 Júpiter (24.79 m/s²)</option>
+          </select>
+        </div>
 
-                <div class="controle">
-                    <label for="gravidade">Gravidade: <span id="gravidadeValor">9.8</span> m/s²</label>
-                    <input type="range" id="gravidade" min="1" max="25" step="0.1" value="9.8">
-                </div>
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" id="airResistance">
+            Considerar resistência do ar
+          </label>
+        </div>
 
-                <div class="botoes">
-                    <button id="btnLancar" class="btn btn-primario">▶ Lançar</button>
-                    <button id="btnReset" class="btn btn-secundario">🔄 Resetar</button>
-                </div>
+        <div class="field checkbox-field">
+          <label>
+            <input type="checkbox" id="keepTrails">
+            Manter trajetórias anteriores
+          </label>
+        </div>
 
-                <div class="info-fisica">
-                    <h3>📊 Dados em tempo real</h3>
-                    <p>Tempo: <span id="tempo">0.00</span> s</p>
-                    <p>Altura: <span id="altura">0.00</span> m</p>
-                    <p>Distância: <span id="distancia">0.00</span> m</p>
-                    <p>Velocidade atual: <span id="velAtual">0.00</span> m/s</p>
-                </div>
-            </aside>
+        <div class="buttons">
+          <button id="launchBtn" class="btn primary">🚀 Lançar</button>
+          <button id="resetBtn" class="btn">🔄 Limpar</button>
+        </div>
 
-            <!-- Área da simulação -->
-            <section class="simulacao">
-                <canvas id="canvas"></canvas>
-                <div class="legenda">
-                    <span>🎯 Alcance máximo: <span id="alcanceMax">0</span> m</span>
-                    <span>📏 Altura máxima: <span id="alturaMax">0</span> m</span>
-                </div>
-            </section>
-        </main>
+        <div class="stats" id="stats">
+          <div class="stat">
+            <span class="stat-label">Altura máxima</span>
+            <span class="stat-value" id="maxHeight">–</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Alcance</span>
+            <span class="stat-value" id="range">–</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Tempo de voo</span>
+            <span class="stat-value" id="flightTime">–</span>
+          </div>
+        </div>
+      </section>
 
-        <footer>
-            <p>Desenvolvido com HTML, CSS e
+      <section class="canvas-wrapper">
+        <canvas id="simCanvas"></canvas>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Simulação simplificada de movimento de projéteis. Feito com HTML, CSS e JavaScript.</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

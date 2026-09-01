@@ -1,350 +1,252 @@
-// ==========================================
-// CONFIGURAÇÃO DOS OBJETOS
-// Cada objeto tem propriedades físicas únicas
-// ==========================================
-const OBJETOS = {
-    futebol: {
-        nome: 'Bola de Futebol',
-        emoji: '⚽',
-        cor: '#ffffff',
-        tamanho: 12,
-        massa: 0.43,          // kg
-        arrasto: 0.25,        // coeficiente de arrasto
-        propulsao: false
-    },
-    canhao: {
-        nome: 'Bola de Canhão',
-        emoji: '💣',
-        cor: '#333333',
-        tamanho: 15,
-        massa: 5.0,
-        arrasto: 0.1,
-        propulsao: false
-    },
-    pena: {
-        nome: 'Pena',
-        emoji: '🪶',
-        cor: '#f0e68c',
-        tamanho: 10,
-        massa: 0.005,
-        arrasto: 2.5,         // alto arrasto
-        propulsao: false
-    },
-    foguete: {
-        nome: 'Foguete',
-        emoji: '🚀',
-        cor: '#ff4444',
-        tamanho: 18,
-        massa: 1.0,
-        arrasto: 0.15,
-        propulsao: true       // tem propulsão contínua
-    },
-    passaro: {
-        nome: 'Pássaro',
-        emoji: '🐦',
-        cor: '#4ade80',
-        tamanho: 14,
-        massa: 0.1,
-        arrasto: 0.4,
-        propulsao: true       // "voa" com propulsão
-    }
+// ---------- Configuração dos objetos ----------
+// mass (kg), radius (m, apenas visual/área), dragCoefficient (adimensional)
+const OBJECTS = {
+  futebol:  { emoji: '⚽', color: '#f8fafc', mass: 0.43, radius: 0.11, drag: 0.25 },
+  basquete: { emoji: '🏀', color: '#f97316', mass: 0.62, radius: 0.12, drag: 0.47 },
+  tenis:    { emoji: '🎾', color: '#facc15', mass: 0.058, radius: 0.033, drag: 0.55 },
+  canhao:   { emoji: '💣', color: '#1f2937', mass: 8,    radius: 0.10, drag: 0.10 },
+  pena:     { emoji: '🪶', color: '#e5e7eb', mass: 0.002, radius: 0.05, drag: 1.9 },
+  pedra:    { emoji: '🪨', color: '#6b7280', mass: 1.2,  radius: 0.06, drag: 0.30 },
 };
 
-// ==========================================
-// ESTADO DA SIMULAÇÃO
-// ==========================================
-let estado = {
-    objetoAtual: 'futebol',
-    angulo: 45,
-    velocidade: 50,
-    gravidade: 9.8,
-    tempo: 0,
-    x: 0,
-    y: 0,
-    vx: 0,
-    vy: 0,
-    lancando: false,
-    trajetoria: [],
-    alcanceMax: 0,
-    alturaMax: 0
-};
+const AIR_DENSITY = 1.225; // kg/m³
 
-// ==========================================
-// REFERÊNCIAS DOM
-// ==========================================
-const canvas = document.getElementById('canvas');
+// ---------- Elementos do DOM ----------
+const canvas = document.getElementById('simCanvas');
 const ctx = canvas.getContext('2d');
 
-const seletorObjeto = document.getElementById('objeto');
-const sliderAngulo = document.getElementById('angulo');
-const sliderVelocidade = document.getElementById('velocidade');
-const sliderGravidade = document.getElementById('gravidade');
+const objectSelect = document.getElementById('objectSelect');
+const velocityInput = document.getElementById('velocity');
+const angleInput = document.getElementById('angle');
+const planetSelect = document.getElementById('planet');
+const airResistanceCheckbox = document.getElementById('airResistance');
+const keepTrailsCheckbox = document.getElementById('keepTrails');
+const velocityValue = document.getElementById('velocityValue');
+const angleValue = document.getElementById('angleValue');
+const launchBtn = document.getElementById('launchBtn');
+const resetBtn = document.getElementById('resetBtn');
 
-const valorAngulo = document.getElementById('anguloValor');
-const valorVelocidade = document.getElementById('velocidadeValor');
-const valorGravidade = document.getElementById('gravidadeValor');
+const maxHeightEl = document.getElementById('maxHeight');
+const rangeEl = document.getElementById('range');
+const flightTimeEl = document.getElementById('flightTime');
 
-const btnLancar = document.getElementById('btnLancar');
-const btnReset = document.getElementById('btnReset');
+// ---------- Estado ----------
+let trails = [];      // trajetórias já finalizadas (mantidas se "manter trajetórias" marcado)
+let currentTrail = null;
+let animationId = null;
+let scale = 8;         // pixels por metro (recalculado a cada lançamento)
+const groundMarginPx = 40;
 
-const displayTempo = document.getElementById('tempo');
-const displayAltura = document.getElementById('altura');
-const displayDistancia = document.getElementById('distancia');
-const displayVelAtual = document.getElementById('velAtual');
-const displayAlcanceMax = document.getElementById('alcanceMax');
-const displayAlturaMax = document.getElementById('alturaMax');
-
-// ==========================================
-// AJUSTE DO CANVAS
-// ==========================================
-function ajustarCanvas() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+// ---------- Setup do canvas responsivo ----------
+function resizeCanvas() {
+  const wrapper = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = wrapper.clientWidth * dpr;
+  canvas.height = wrapper.clientHeight * dpr;
+  canvas.style.width = wrapper.clientWidth + 'px';
+  canvas.style.height = wrapper.clientHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawScene();
 }
-window.addEventListener('resize', ajustarCanvas);
-ajustarCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-// ==========================================
-// FUNÇÕES DE ESCALA (m -> pixels)
-// ==========================================
-function metroParaPixelX(metros) {
-    return 50 + (metros * canvas.width) / 500;
-}
+// ---------- Atualização dos labels ----------
+velocityInput.addEventListener('input', () => {
+  velocityValue.textContent = velocityInput.value;
+});
+angleInput.addEventListener('input', () => {
+  angleValue.textContent = angleInput.value;
+});
 
-function metroParaPixelY(metros) {
-    return canvas.height - 50 - (metros * canvas.height) / 300;
-}
+// ---------- Física ----------
+function simulateTrajectory(objectKey, v0, angleDeg, g, useDrag) {
+  const obj = OBJECTS[objectKey];
+  const angleRad = angleDeg * Math.PI / 180;
+  let vx = v0 * Math.cos(angleRad);
+  let vy = -v0 * Math.sin(angleRad); // y cresce para baixo no canvas, mas aqui trabalhamos em "mundo": y para cima positivo na física, convertido depois
 
-// ==========================================
-// DESENHO DO CENÁRIO
-// ==========================================
-function desenharCenario() {
-    // Limpa o canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Desenha o chão
-    const gradiente = ctx.createLinearGradient(0, canvas.height - 50, 0, canvas.height);
-    gradiente.addColorStop(0, '#4a3b2a');
-    gradiente.addColorStop(1, '#2a1b0a');
-    ctx.fillStyle = gradiente;
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    
-    // Linhas de grade (marcadores de distância)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.font = '10px Arial';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    
-    for (let i = 0; i <= 500; i += 50) {
-        const px = metroParaPixelX(i);
-        ctx.beginPath();
-        ctx.moveTo(px, 0);
-        ctx.lineTo(px, canvas.height - 50);
-        ctx.stroke();
-        ctx.fillText(i + 'm', px - 10, canvas.height - 35);
+  // Vamos trabalhar com y física crescendo para cima (padrão físico), converter na hora de desenhar.
+  vy = v0 * Math.sin(angleRad);
+
+  const dt = 0.016; // ~60 fps
+  const area = Math.PI * obj.radius * obj.radius;
+
+  let x = 0, y = 0, t = 0;
+  const points = [{ x, y, t }];
+  let maxY = 0;
+
+  const maxSteps = 20000;
+  let steps = 0;
+
+  while (y >= 0 && steps < maxSteps) {
+    steps++;
+    let ax = 0, ay = -g;
+
+    if (useDrag) {
+      const speed = Math.sqrt(vx * vx + vy * vy) || 0.0001;
+      const dragForce = 0.5 * AIR_DENSITY * obj.drag * area * speed * speed;
+      const dragAccel = dragForce / obj.mass;
+      ax += -dragAccel * (vx / speed);
+      ay += -dragAccel * (vy / speed);
     }
-    
-    for (let i = 0; i <= 300; i += 50) {
-        const py = metroParaPixelY(i);
-        ctx.beginPath();
-        ctx.moveTo(50, py);
-        ctx.lineTo(canvas.width, py);
-        ctx.stroke();
-        if (i > 0) ctx.fillText(i + 'm', 10, py + 4);
+
+    vx += ax * dt;
+    vy += ay * dt;
+    x += vx * dt;
+    y += vy * dt;
+    t += dt;
+
+    if (y > maxY) maxY = y;
+    points.push({ x, y, t });
+
+    if (t > 60) break; // segurança
+  }
+
+  // Corrige o último ponto para pousar exatamente em y=0 (interpolação)
+  if (points.length >= 2) {
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    if (last.y < 0 && prev.y !== last.y) {
+      const frac = prev.y / (prev.y - last.y);
+      const landX = prev.x + (last.x - prev.x) * frac;
+      const landT = prev.t + (last.t - prev.t) * frac;
+      points[points.length - 1] = { x: landX, y: 0, t: landT };
     }
-    
-    // Desenha o lançador (canhão)
-    const px = metroParaPixelX(0);
-    const py = metroParaPixelY(0);
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(-estado.angulo * Math.PI / 180);
-    ctx.fillStyle = '#666';
-    ctx.fillRect(0, -8, 40, 16);
-    ctx.restore();
-    
-    // Base do lançador
-    ctx.fillStyle = '#444';
-    ctx.beginPath();
-    ctx.arc(px, py, 20, 0, Math.PI * 2);
-    ctx.fill();
+  }
+
+  const range = points[points.length - 1].x;
+  const flightTime = points[points.length - 1].t;
+
+  return { points, maxHeight: maxY, range, flightTime, obj };
 }
 
-// ==========================================
-// DESENHO DO OBJETO
-// ==========================================
-function desenharObjeto() {
-    const obj = OBJETOS[estado.objetoAtual];
-    const px = metroParaPixelX(estado.x);
-    const py = metroParaPixelY(estado.y);
-    
-    // Rastro da trajetória
-    if (estado.trajetoria.length > 1) {
-        ctx.strokeStyle = 'rgba(255, 107, 53, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.moveTo(metroParaPixelX(estado.trajetoria[0].x), 
-                   metroParaPixelY(estado.trajetoria[0].y));
-        for (let ponto of estado.trajetoria) {
-            ctx.lineTo(metroParaPixelX(ponto.x), metroParaPixelY(ponto.y));
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-    
-    // Objeto (emoji)
-    ctx.font = `${obj.tamanho * 2}px Arial`;
+// ---------- Desenho ----------
+function getGroundY() {
+  return (canvas.height / (window.devicePixelRatio || 1)) - groundMarginPx;
+}
+
+function drawScene() {
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0, 0, w, h);
+
+  // chão
+  const groundY = getGroundY();
+  ctx.fillStyle = '#0f2417';
+  ctx.fillRect(0, groundY, w, h - groundY);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(w, groundY);
+  ctx.stroke();
+
+  // trajetórias antigas
+  trails.forEach(trail => drawTrail(trail, groundY, 0.35));
+
+  // trajetória atual
+  if (currentTrail) drawTrail(currentTrail, groundY, 1);
+}
+
+function drawTrail(trail, groundY, alpha) {
+  const { points, obj, progress } = trail;
+  const visibleCount = progress != null ? progress : points.length;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = obj.color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < visibleCount; i++) {
+    const p = points[i];
+    const px = 20 + p.x * scale;
+    const py = groundY - p.y * scale;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // objeto na posição atual
+  if (visibleCount > 0) {
+    const p = points[Math.min(visibleCount - 1, points.length - 1)];
+    const px = 20 + p.x * scale;
+    const py = groundY - p.y * scale;
+    ctx.globalAlpha = alpha;
+    ctx.font = `${Math.max(16, obj.radius * scale * 4)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(obj.emoji, px, py);
-    
-    // Sombra/brilho
-    ctx.shadowColor = obj.cor;
-    ctx.shadowBlur = 15;
-    ctx.fillText(obj.emoji, px, py);
-    ctx.shadowBlur = 0;
+  }
+  ctx.restore();
 }
 
-// ==========================================
-// FÍSICA: CÁLCULO DO MOVIMENTO
-// ==========================================
-function atualizarFisica(dt) {
-    const obj = OBJETOS[estado.objetoAtual];
-    
-    // Força da gravidade
-    let ax = 0;
-    let ay = -estado.gravidade;
-    
-    // Resistência do ar (arrasto)
-    const velocidade = Math.sqrt(estado.vx * estado.vx + estado.vy * estado.vy);
-    if (velocidade > 0) {
-        const forcaArrasto = 0.5 * obj.arrasto * velocidade * velocidade / obj.massa;
-        ax -= (estado.vx / velocidade) * forcaArrasto;
-        ay -= (estado.vy / velocidade) * forcaArrasto;
+// ---------- Escala automática ----------
+function computeScale(range, maxHeight) {
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  const usableW = w - 60;
+  const usableH = h - groundMarginPx - 40;
+  const scaleX = usableW / Math.max(range, 1);
+  const scaleY = usableH / Math.max(maxHeight, 1);
+  return Math.max(0.5, Math.min(scaleX, scaleY, 60));
+}
+
+// ---------- Lançamento ----------
+function launch() {
+  if (animationId) cancelAnimationFrame(animationId);
+
+  const objectKey = objectSelect.value;
+  const v0 = parseFloat(velocityInput.value);
+  const angleDeg = parseFloat(angleInput.value);
+  const g = parseFloat(planetSelect.value);
+  const useDrag = airResistanceCheckbox.checked;
+
+  const result = simulateTrajectory(objectKey, v0, angleDeg, g, useDrag);
+  scale = computeScale(result.range, result.maxHeight);
+
+  if (!keepTrailsCheckbox.checked) {
+    trails = [];
+  } else if (currentTrail) {
+    trails.push(currentTrail);
+  }
+
+  currentTrail = { ...result, progress: 0 };
+
+  maxHeightEl.textContent = result.maxHeight.toFixed(1) + ' m';
+  rangeEl.textContent = result.range.toFixed(1) + ' m';
+  flightTimeEl.textContent = result.flightTime.toFixed(2) + ' s';
+
+  animateTrail();
+}
+
+function animateTrail() {
+  const totalPoints = currentTrail.points.length;
+  const stepsPerFrame = Math.max(1, Math.floor(totalPoints / 180)); // termina em ~3s a 60fps
+
+  function step() {
+    currentTrail.progress = Math.min(totalPoints, (currentTrail.progress || 0) + stepsPerFrame);
+    drawScene();
+    if (currentTrail.progress < totalPoints) {
+      animationId = requestAnimationFrame(step);
     }
-    
-    // Propulsão (foguete/pássaro)
-    if (obj.propulsao && estado.tempo < 3) {
-        const anguloRad = estado.angulo * Math.PI / 180;
-        const forcaPropulsao = 30;
-        ax += Math.cos(anguloRad) * forcaPropulsao;
-        ay += Math.sin(anguloRad) * forcaPropulsao;
-    }
-    
-    // Atualiza velocidades (integração de Euler)
-    estado.vx += ax * dt;
-    estado.vy += ay * dt;
-    
-    // Atualiza posições
-    estado.x += estado.vx * dt;
-    estado.y += estado.vy * dt;
-    
-    // Atualiza tempo
-    estado.tempo += dt;
-    
-    // Registra trajetória
-    estado.trajetoria.push({ x: estado.x, y: estado.y });
-    
-    // Atualiza máximos
-    if (estado.y > estado.alturaMax) estado.alturaMax = estado.y;
-    if (estado.x > estado.alcanceMax) estado.alcanceMax = estado.x;
-    
-    // Verifica colisão com o chão
-    if (estado.y <= 0 && estado.tempo > 0.1) {
-        estado.y = 0;
-        estado.lancando = false;
-    }
+  }
+  step();
 }
 
-// ==========================================
-// ATUALIZAÇÃO DOS DISPLAYS
-// ==========================================
-function atualizarDisplays() {
-    const velocidadeAtual = Math.sqrt(estado.vx * estado.vx + estado.vy * estado.vy);
-    displayTempo.textContent = estado.tempo.toFixed(2);
-    displayAltura.textContent = Math.max(0, estado.y).toFixed(2);
-    displayDistancia.textContent = estado.x.toFixed(2);
-    displayVelAtual.textContent = velocidadeAtual.toFixed(2);
-    displayAlcanceMax.textContent = estado.alcanceMax.toFixed(2);
-    displayAlturaMax.textContent = estado.alturaMax.toFixed(2);
+// ---------- Reset ----------
+function resetAll() {
+  if (animationId) cancelAnimationFrame(animationId);
+  trails = [];
+  currentTrail = null;
+  maxHeightEl.textContent = '–';
+  rangeEl.textContent = '–';
+  flightTimeEl.textContent = '–';
+  drawScene();
 }
 
-// ==========================================
-// LOOP DE ANIMAÇÃO
-// ==========================================
-let ultimoTempo = 0;
-function loopAnimacao(timestamp) {
-    if (!ultimoTempo) ultimoTempo = timestamp;
-    const dt = (timestamp - ultimoTempo) / 1000;
-    ultimoTempo = timestamp;
-    
-    if (estado.lancando) {
-        atualizarFisica(dt);
-    }
-    
-    desenharCenario();
-    desenharObjeto();
-    atualizarDisplays();
-    
-    requestAnimationFrame(loopAnimacao);
-}
+// ---------- Eventos ----------
+launchBtn.addEventListener('click', launch);
+resetBtn.addEventListener('click', resetAll);
 
-// ==========================================
-// EVENTOS DOS CONTROLES
-// ==========================================
-seletorObjeto.addEventListener('change', (e) => {
-    estado.objetoAtual = e.target.value;
-    resetarSimulacao();
-});
-
-sliderAngulo.addEventListener('input', (e) => {
-    estado.angulo = parseInt(e.target.value);
-    valorAngulo.textContent = estado.angulo;
-});
-
-sliderVelocidade.addEventListener('input', (e) => {
-    estado.velocidade = parseInt(e.target.value);
-    valorVelocidade.textContent = estado.velocidade;
-});
-
-sliderGravidade.addEventListener('input', (e) => {
-    estado.gravidade = parseFloat(e.target.value);
-    valorGravidade.textContent = estado.gravidade.toFixed(1);
-});
-
-btnLancar.addEventListener('click', () => {
-    if (estado.lancando) return;
-    
-    // Converte velocidade e ângulo em componentes vx e vy
-    const anguloRad = estado.angulo * Math.PI / 180;
-    estado.vx = estado.velocidade * Math.cos(anguloRad);
-    estado.vy = estado.velocidade * Math.sin(anguloRad);
-    estado.x = 0;
-    estado.y = 0;
-    estado.tempo = 0;
-    estado.trajetoria = [{ x: 0, y: 0 }];
-    estado.alturaMax = 0;
-    estado.alcanceMax = 0;
-    estado.lancando = true;
-});
-
-btnReset.addEventListener('click', resetarSimulacao);
-
-function resetarSimulacao() {
-    estado.tempo = 0;
-    estado.x = 0;
-    estado.y = 0;
-    estado.vx = 0;
-    estado.vy = 0;
-    estado.lancando = false;
-    estado.trajetoria = [];
-    estado.alturaMax = 0;
-    estado.alcanceMax = 0;
-    atualizarDisplays();
-}
-
-// ==========================================
-// INICIALIZAÇÃO
-// ==========================================
-requestAnimationFrame(loopAnimacao);
+// ---------- Inicialização ----------
+resizeCanvas();
