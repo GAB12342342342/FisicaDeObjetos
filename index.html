@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Trajetória de Objetos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Simulador de Trajetória</h1>
+            <p>Explore a física do lançamento de projéteis com objetos diferentes</p>
+        </header>
+
+        <main class="app">
+            <!-- Painel de controles -->
+            <aside class="painel">
+                <h2>⚙️ Controles</h2>
+
+                <div class="controle">
+                    <label for="objeto">Objeto:</label>
+                    <select id="objeto">
+                        <option value="futebol">⚽ Bola de Futebol</option>
+                        <option value="canhao">💣 Bola de Canhão</option>
+                        <option value="pena">🪶 Pena</option>
+                        <option value="foguete">🚀 Foguete</option>
+                        <option value="passaro">🐦 Pássaro</option>
+                    </select>
+                </div>
+
+                <div class="controle">
+                    <label for="angulo">Ângulo: <span id="anguloValor">45</span>°</label>
+                    <input type="range" id="angulo" min="0" max="90" value="45">
+                </div>
+
+                <div class="controle">
+                    <label for="velocidade">Velocidade: <span id="velocidadeValor">50</span> m/s</label>
+                    <input type="range" id="velocidade" min="10" max="150" value="50">
+                </div>
+
+                <div class="controle">
+                    <label for="gravidade">Gravidade: <span id="gravidadeValor">9.8</span> m/s²</label>
+                    <input type="range" id="gravidade" min="1" max="25" step="0.1" value="9.8">
+                </div>
+
+                <div class="botoes">
+                    <button id="btnLancar" class="btn btn-primario">▶ Lançar</button>
+                    <button id="btnReset" class="btn btn-secundario">🔄 Resetar</button>
+                </div>
+
+                <div class="info-fisica">
+                    <h3>📊 Dados em tempo real</h3>
+                    <p>Tempo: <span id="tempo">0.00</span> s</p>
+                    <p>Altura: <span id="altura">0.00</span> m</p>
+                    <p>Distância: <span id="distancia">0.00</span> m</p>
+                    <p>Velocidade atual: <span id="velAtual">0.00</span> m/s</p>
+                </div>
+            </aside>
+
+            <!-- Área da simulação -->
+            <section class="simulacao">
+                <canvas id="canvas"></canvas>
+                <div class="legenda">
+                    <span>🎯 Alcance máximo: <span id="alcanceMax">0</span> m</span>
+                    <span>📏 Altura máxima: <span id="alturaMax">0</span> m</span>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Desenvolvido com HTML, CSS e
